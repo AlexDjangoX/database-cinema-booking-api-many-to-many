@@ -85,3 +85,35 @@ model Seat {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
+
+// const express = require("express");
+// const { createTicket } = require("../controllers/tickets");
+
+// const router = express.Router();
+
+// router.post("/tickets", createTicket);
+
+// module.exports = router;
+// const prisma = require("../utils/prisma");
+
+// const createTicket = async (req, res) => {
+//   const createdTicket = await prisma.ticket.create({
+//     data: {
+//       screenId: 1,
+//       seats: {
+//         createOrConnect: {
+//           row: 1,
+//           letter: "A",
+//           screenId: 1,
+//         },
+//       },
+//     },
+//     include: {
+//       seats: true,
+//     },
+//   });
+
+//   res.json({ data: createdTicket });
+// };
+
+// module.exports = { createTicket };
