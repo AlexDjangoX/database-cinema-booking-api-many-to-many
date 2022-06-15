@@ -11,6 +11,7 @@ datasource db {
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
+// a customer can have only one contact
 model Customer {
   id          Int       @id @default(autoincrement())
   name        String
@@ -29,6 +30,32 @@ model Contact {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
+
+model Ticket {
+  id            Int       @id @default(autoincrement())
+  screening     Screening @relation(fields: [screeningId], references: [id])
+  screeningId   Int
+  customer      Customer  @relation(fields: [customerId], references: [id])
+  customerId    Int
+
+  seats         Seat[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+// ticket many-to-many seat
+model Seat {
+  id            Int       @id @default(autoincrement())
+  name          String
+
+  tickets       Ticket[]
+  
+  screen        Screen @relation(fields: [screenId], references: [id])
+  screenId      Int
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
 
 model Movie {
   id          Int         @id @default(autoincrement())
@@ -62,29 +89,9 @@ model Screening {
   updatedAt   DateTime  @updatedAt
 }
 
-model Ticket {
-  id            Int       @id @default(autoincrement())
-  screening     Screening @relation(fields: [screeningId], references: [id])
-  screeningId   Int
-  customer      Customer  @relation(fields: [customerId], references: [id])
-  customerId    Int
 
-  seats         Seat[]
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
 
-model Seat {
-  id            Int       @id @default(autoincrement())
-  type          String
-
-  tickets       Ticket[]
-  screen        Screen @relation(fields: [screenId], references: [id])
-  screenId      Int
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
 
 // const express = require("express");
 // const { createTicket } = require("../controllers/tickets");

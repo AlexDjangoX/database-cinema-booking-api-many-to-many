@@ -1,80 +1,31 @@
 const { PrismaClient } = require("@prisma/client");
-const { transformDocument } = require("@prisma/client/runtime");
-const prisma = new PrismaClient();
+const { prisma, prismaNoLog } = require("../src/utils/prisma");
+
+// Choose prismaNoLog if you don't want SQL queries logged
+const db = prisma;
 
 async function seed() {
   const customer = await createCustomer();
   const movies = await createMovies();
   const screens = await createScreens();
-  const seats = await createSeats(screens[0]);
   const screenings = await createScreenings(screens, movies);
-  const ticket = await createTicket(screenings[0], customer, seats);
-  console.log("12........................: ", ticket);
+  const seats = await createSeats(screens);
+  const ticket = await createTicket(customer, screenings, seats);
+
+  console.log("Screenings: ", screenings);
+  console.log("Seats: ", seats);
+  console.log("Ticket ", ticket);
+
   process.exit(0);
-}
-async function createSeats(screen) {
-  const seat1 = await prisma.seat.create({
-    data: {
-      type: "seat1",
-      screen: {
-        connect: {
-          id: screen.id,
-        },
-      },
-    },
-  });
-
-  const seat2 = await prisma.seat.create({
-    data: {
-      type: "seat2",
-      screen: {
-        connect: {
-          id: screen.id,
-        },
-      },
-    },
-  });
-  //   console.log("seatsCreated   :", seat1, seat2);
-  return [seat1, seat2];
-}
-
-async function createTicket(screening, customer, seats) {
-  const ticket = await prisma.ticket.create({
-    data: {
-      screening: {
-        connect: {
-          id: screening.id,
-        },
-      },
-      customer: {
-        connect: {
-          id: customer.id,
-        },
-      },
-      seats: {
-        connect: [{ id: seats[0].id }, { id: seats[1].id }],
-      },
-    },
-    include: {
-      customer: true,
-      screening: {
-        include: {
-          movie: true,
-        },
-      },
-      seats: true,
-    },
-  });
-  return ticket;
 }
 
 async function createCustomer() {
-  const customer = await prisma.customer.create({
+  const customer = await db.customer.create({
     data: {
       name: "Alice",
       contact: {
         create: {
-          email: "alice@boolean.co.uk",
+          email: "palice@boolean.co.uk",
           phone: "1234567890",
         },
       },
@@ -84,7 +35,7 @@ async function createCustomer() {
     },
   });
 
-  //   console.log("Customer created", customer);
+  // console.log('Customer created', customer);
 
   return customer;
 }
@@ -98,11 +49,11 @@ async function createMovies() {
   const movies = [];
 
   for (const rawMovie of rawMovies) {
-    const movie = await prisma.movie.create({ data: rawMovie });
+    const movie = await db.movie.create({ data: rawMovie });
     movies.push(movie);
   }
 
-  //   console.log("Movies created", movies);
+  // console.log('Movies created', movies);
 
   return movies;
 }
@@ -113,9 +64,11 @@ async function createScreens() {
   const screens = [];
 
   for (const rawScreen of rawScreens) {
-    const screen = await prisma.screen.create({
+    const screen = await db.screen.create({
       data: rawScreen,
     });
+
+    // console.log('Screen created', screen);
 
     screens.push(screen);
   }
@@ -125,13 +78,14 @@ async function createScreens() {
 
 async function createScreenings(screens, movies) {
   const screeningDate = new Date();
-  let screenings = [];
+
+  const screenings = [];
 
   for (const screen of screens) {
     for (let i = 0; i < movies.length; i++) {
       screeningDate.setDate(screeningDate.getDate() + i);
 
-      const screening = await prisma.screening.create({
+      const screening = await db.screening.create({
         data: {
           startsAt: screeningDate,
           movie: {
@@ -145,19 +99,120 @@ async function createScreenings(screens, movies) {
             },
           },
         },
+        include: {
+          screen: true,
+          movie: true,
+        },
       });
+
       screenings.push(screening);
 
-      //   console.log("Screening created", screening);
+      // console.log('Screening created', screening);
     }
   }
 
   return screenings;
 }
 
+async function createSeats(screens) {
+  let seats = [];
+
+  for (const screen of screens) {
+    let screenSeats = [];
+
+    seatNumbers = [1, 2, 7];
+
+    for (const seatNum of seatNumbers) {
+      const seat = await db.seat.create({
+        data: {
+          name: `S${screen.number}#${screen.number * seatNum}`,
+          screen: {
+            connect: {
+              id: screen.id,
+            },
+          },
+        },
+      });
+
+      screenSeats.push(seat);
+    }
+
+    seats.push(screenSeats);
+  }
+
+  return seats;
+}
+
+async function createTicket(customer, screenings, seats) {
+  const screening = screenings[3];
+  const screeningId = screening.id;
+  // const screenId  = screening.screenId;
+  const ticketSeats = seats[1];
+
+  const ticket = await db.ticket.create({
+    data: {
+      screening: {
+        connect: { id: screeningId },
+      },
+      customer: {
+        connect: { id: customer.id },
+      },
+      seats: {
+        connect: [{ id: ticketSeats[0].id }, { id: ticketSeats[2].id }],
+      },
+    },
+    include: {
+      screening: {
+        include: {
+          screen: true,
+          movie: true,
+        },
+      },
+      customer: true,
+      seats: true,
+    },
+  });
+
+  return ticket;
+}
+
+async function query() {
+  const seats = await db.seat.findMany({
+    where: {
+      screen: {
+        number: 2,
+      },
+    },
+    include: {
+      screen: true,
+      tickets: {
+        include: {
+          customer: {
+            include: {
+              contact: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  seats.forEach((seat, index) => {
+    console.log(
+      `\nSeat #${index} id=${seat.id}: ${seat.name}, screen: ${seat.screen.number}`
+    );
+    if (seat.tickets) {
+      console.log(`Tickets: `, JSON.stringify(seat.tickets, null, 2));
+    }
+  });
+
+  // Don't edit any of the code below this line
+  process.exit(0);
+}
+
 seed()
   .catch(async (e) => {
     console.error(e);
-    await prisma.$disconnect();
+    await db.$disconnect();
   })
   .finally(() => process.exit(1));
