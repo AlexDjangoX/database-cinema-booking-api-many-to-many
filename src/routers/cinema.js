@@ -7,7 +7,7 @@ const {
 
 const router = express.Router();
 
-router.post("/ticket", createTicket);
+router.post("/", createTicket);
 router.get("/screen/:id", getScreeningsByScreenId);
 
 module.exports = router;

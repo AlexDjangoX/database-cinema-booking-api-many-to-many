@@ -25,7 +25,7 @@ async function createCustomer() {
       name: "Alice",
       contact: {
         create: {
-          email: "palice@boolean.co.uk",
+          email: "alice@boolean.co.uk",
           phone: "1234567890",
         },
       },
